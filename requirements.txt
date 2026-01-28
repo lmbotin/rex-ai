@@ -1,9 +1,21 @@
+# Core ML/CV dependencies
 numpy
 pandas
-pydantic
+pydantic>=2.0
+pydantic-settings
 scikit-learn
 opencv-python
 torch
 torchvision
 transformers
 matplotlib
+
+# Voice agent dependencies
+fastapi
+uvicorn[standard]
+websockets
+httpx
+python-dotenv
+python-multipart
+twilio
+openai>=1.0

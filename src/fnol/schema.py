@@ -22,6 +22,7 @@ class SourceModality(str, Enum):
     TEXT = "text"
     IMAGE = "image"
     DOCUMENT = "document"
+    VOICE = "voice"
 
 
 class DamageType(str, Enum):

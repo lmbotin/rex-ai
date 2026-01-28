@@ -19,11 +19,15 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+*.pyo
+*.pyd
 
 # Virtual environments
 venv/
 ENV/
 env/
+.venv/
+.conda/
 
 # IDE
 .vscode/
@@ -31,12 +35,63 @@ env/
 *.swp
 *.swo
 *~
+.cursor/
 
 # Testing
 .pytest_cache/
 .coverage
 htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
 
 # OS
 .DS_Store
 Thumbs.db
+*.log
+*.bak
+
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+secrets/
+credentials.json
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# MyPy / Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pytype/
+
+# Data & Models (large files)
+*.h5
+*.hdf5
+*.pkl
+*.pickle
+*.pt
+*.pth
+*.onnx
+*.bin
+!requirements*.txt
+
+# Logs & temporary files
+logs/
+*.log
+tmp/
+temp/
+*.tmp
+
+# Local development
+local_settings.py
+db.sqlite3
+*.db
