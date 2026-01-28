@@ -1,0 +1,80 @@
+{
+  "claim_id": "CLM-2024-COMPLETE-001",
+  "claimant": {
+    "name": "Sarah Johnson",
+    "policy_number": "POL-987654321",
+    "contact_phone": "+1-555-0199",
+    "contact_email": "sarah.johnson@example.com"
+  },
+  "incident": {
+    "incident_date": "2024-01-15T14:30:00",
+    "incident_date_provenance": {
+      "source_modality": "text",
+      "confidence": 0.95,
+      "pointer": "text_span:0-30"
+    },
+    "incident_location": "456 Oak Avenue, Apt 3C, San Francisco, CA 94102",
+    "incident_location_provenance": {
+      "source_modality": "text",
+      "confidence": 0.98,
+      "pointer": "text_span:31-78"
+    },
+    "incident_description": "A pipe burst in the bathroom ceiling during the night, causing water to leak into the living room below. Water damaged the ceiling drywall, paint, and light fixture. The leak was discovered in the morning when I noticed water stains and active dripping.",
+    "incident_description_provenance": {
+      "source_modality": "text",
+      "confidence": 0.97,
+      "pointer": "text_span:79-320"
+    },
+    "damage_type": "water",
+    "damage_type_provenance": {
+      "source_modality": "text",
+      "confidence": 0.99,
+      "pointer": "text_span:145-150"
+    }
+  },
+  "property_damage": {
+    "property_type": "ceiling",
+    "property_type_provenance": {
+      "source_modality": "image",
+      "confidence": 0.94,
+      "pointer": "image_id:img_001.jpg"
+    },
+    "room_location": "living room",
+    "room_location_provenance": {
+      "source_modality": "text",
+      "confidence": 0.96,
+      "pointer": "text_span:161-172"
+    },
+    "estimated_repair_cost": 2850.0,
+    "estimated_repair_cost_provenance": {
+      "source_modality": "document",
+      "confidence": 0.99,
+      "pointer": "doc_page:1_repair_estimate.pdf"
+    },
+    "damage_severity": "moderate",
+    "damage_severity_provenance": {
+      "source_modality": "image",
+      "confidence": 0.89,
+      "pointer": "image_id:img_002.jpg"
+    }
+  },
+  "evidence": {
+    "has_damage_photos": true,
+    "damage_photo_count": 4,
+    "damage_photo_ids": [
+      "img_001_ceiling_overview.jpg",
+      "img_002_water_stain.jpg",
+      "img_003_dripping_area.jpg",
+      "img_004_light_fixture.jpg"
+    ],
+    "has_repair_estimate": true,
+    "has_incident_report": true,
+    "missing_evidence": []
+  },
+  "consistency": {
+    "has_conflicts": false,
+    "conflict_details": []
+  },
+  "created_at": "2024-01-15T16:45:00",
+  "schema_version": "1.0.0"
+}

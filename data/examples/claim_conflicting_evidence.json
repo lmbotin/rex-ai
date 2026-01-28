@@ -1,0 +1,84 @@
+{
+  "claim_id": "CLM-2024-CONFLICT-003",
+  "claimant": {
+    "name": "Jennifer Martinez",
+    "policy_number": "POL-555123456",
+    "contact_phone": "+1-555-0155",
+    "contact_email": "jennifer.m@example.com"
+  },
+  "incident": {
+    "incident_date": "2024-03-05T22:00:00",
+    "incident_date_provenance": {
+      "source_modality": "text",
+      "confidence": 0.91,
+      "pointer": "text_span:0-28"
+    },
+    "incident_location": "321 Pine Boulevard, San Jose, CA 95112",
+    "incident_location_provenance": {
+      "source_modality": "text",
+      "confidence": 0.94,
+      "pointer": "text_span:29-68"
+    },
+    "incident_description": "Kitchen fire caused by unattended stove. Fire damaged cabinets, countertop, and ceiling above stove area.",
+    "incident_description_provenance": {
+      "source_modality": "text",
+      "confidence": 0.96,
+      "pointer": "text_span:69-170"
+    },
+    "damage_type": "fire",
+    "damage_type_provenance": {
+      "source_modality": "text",
+      "confidence": 0.98,
+      "pointer": "text_span:69-80"
+    }
+  },
+  "property_damage": {
+    "property_type": "appliance",
+    "property_type_provenance": {
+      "source_modality": "image",
+      "confidence": 0.87,
+      "pointer": "image_id:img_002.jpg"
+    },
+    "room_location": "kitchen",
+    "room_location_provenance": {
+      "source_modality": "text",
+      "confidence": 0.99,
+      "pointer": "text_span:69-76"
+    },
+    "estimated_repair_cost": 8500.0,
+    "estimated_repair_cost_provenance": {
+      "source_modality": "document",
+      "confidence": 0.95,
+      "pointer": "doc_page:1_estimate.pdf"
+    },
+    "damage_severity": "severe",
+    "damage_severity_provenance": {
+      "source_modality": "image",
+      "confidence": 0.82,
+      "pointer": "image_id:img_001.jpg"
+    }
+  },
+  "evidence": {
+    "has_damage_photos": true,
+    "damage_photo_count": 3,
+    "damage_photo_ids": [
+      "img_001_kitchen_damage.jpg",
+      "img_002_stove_area.jpg",
+      "img_003_ceiling.jpg"
+    ],
+    "has_repair_estimate": true,
+    "has_incident_report": true,
+    "missing_evidence": []
+  },
+  "consistency": {
+    "has_conflicts": true,
+    "conflict_details": [
+      "Date mismatch: Text description says 'March 5th at 10pm' (2024-03-05T22:00:00) but image EXIF data from img_001_kitchen_damage.jpg shows 2024-03-07T14:32:15",
+      "Location inconsistency: Text describes damage to 'cabinets, countertop, and ceiling' but image img_001.jpg primarily shows wall damage, not cabinet damage",
+      "Severity conflict: Extracted damage_severity from image is 'severe' (confidence 0.82) but repair estimate document indicates 'moderate damage' with itemized costs suggesting less extensive repairs than severe classification would warrant",
+      "Cost-severity mismatch: Estimated repair cost of $8,500 is relatively moderate for fire damage classified as 'severe', which typically exceeds $15,000"
+    ]
+  },
+  "created_at": "2024-03-06T09:15:00",
+  "schema_version": "1.0.0"
+}

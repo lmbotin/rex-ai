@@ -1,0 +1,382 @@
+{
+  "title": "PropertyDamageClaim",
+  "description": "Canonical schema for a property damage claim.\n\nIncludes provenance tracking for all extracted fields.",
+  "type": "object",
+  "properties": {
+    "claim_id": {
+      "title": "Claim Id",
+      "description": "Unique claim identifier",
+      "type": "string"
+    },
+    "claimant": {
+      "title": "Claimant",
+      "description": "Claimant information",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ClaimantInfo"
+        }
+      ]
+    },
+    "incident": {
+      "title": "Incident",
+      "description": "Incident details",
+      "allOf": [
+        {
+          "$ref": "#/definitions/IncidentInfo"
+        }
+      ]
+    },
+    "property_damage": {
+      "title": "Property Damage",
+      "description": "Property damage details",
+      "allOf": [
+        {
+          "$ref": "#/definitions/PropertyDamageInfo"
+        }
+      ]
+    },
+    "evidence": {
+      "title": "Evidence",
+      "description": "Evidence completeness tracking",
+      "allOf": [
+        {
+          "$ref": "#/definitions/EvidenceChecklist"
+        }
+      ]
+    },
+    "consistency": {
+      "title": "Consistency",
+      "description": "Consistency check results",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ConsistencyFlags"
+        }
+      ]
+    },
+    "created_at": {
+      "title": "Created At",
+      "description": "Claim creation timestamp",
+      "type": "string",
+      "format": "date-time"
+    },
+    "schema_version": {
+      "title": "Schema Version",
+      "description": "Schema version",
+      "default": "1.0.0",
+      "type": "string"
+    }
+  },
+  "required": [
+    "claim_id",
+    "claimant",
+    "incident",
+    "property_damage",
+    "evidence"
+  ],
+  "examples": [
+    {
+      "claim_id": "CLM-2024-001",
+      "claimant": {
+        "name": "John Doe",
+        "policy_number": "POL-123456",
+        "contact_phone": "+1-555-0100",
+        "contact_email": "john.doe@example.com"
+      },
+      "incident": {
+        "incident_date": "2024-01-15T14:30:00Z",
+        "incident_location": "123 Main St, Apt 4B, San Francisco, CA",
+        "incident_description": "Pipe burst in ceiling causing water damage",
+        "damage_type": "water"
+      },
+      "property_damage": {
+        "property_type": "ceiling",
+        "room_location": "living room",
+        "estimated_repair_cost": 2500.0,
+        "damage_severity": "moderate"
+      },
+      "evidence": {
+        "has_damage_photos": true,
+        "damage_photo_count": 3,
+        "damage_photo_ids": [
+          "img_001.jpg",
+          "img_002.jpg",
+          "img_003.jpg"
+        ],
+        "has_repair_estimate": true,
+        "has_incident_report": false,
+        "missing_evidence": [
+          "incident_report"
+        ]
+      }
+    }
+  ],
+  "definitions": {
+    "ClaimantInfo": {
+      "title": "ClaimantInfo",
+      "description": "Basic claimant information (minimal for Sprint 1).",
+      "type": "object",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "description": "Claimant full name",
+          "type": "string"
+        },
+        "policy_number": {
+          "title": "Policy Number",
+          "description": "Insurance policy number",
+          "type": "string"
+        },
+        "contact_phone": {
+          "title": "Contact Phone",
+          "description": "Contact phone number",
+          "type": "string"
+        },
+        "contact_email": {
+          "title": "Contact Email",
+          "description": "Contact email address",
+          "type": "string"
+        }
+      }
+    },
+    "SourceModality": {
+      "title": "SourceModality",
+      "description": "Source of extracted information.",
+      "enum": [
+        "text",
+        "image",
+        "document"
+      ],
+      "type": "string"
+    },
+    "Provenance": {
+      "title": "Provenance",
+      "description": "Provenance metadata for an extracted field.\n\nTracks where the information came from and confidence level.",
+      "type": "object",
+      "properties": {
+        "source_modality": {
+          "$ref": "#/definitions/SourceModality"
+        },
+        "confidence": {
+          "title": "Confidence",
+          "description": "Confidence score between 0 and 1",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "type": "number"
+        },
+        "pointer": {
+          "title": "Pointer",
+          "description": "Reference to source (e.g., 'text_span:0-50', 'image_id:img_001')",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_modality",
+        "confidence",
+        "pointer"
+      ]
+    },
+    "DamageType": {
+      "title": "DamageType",
+      "description": "Type of damage to property.",
+      "enum": [
+        "water",
+        "fire",
+        "impact",
+        "weather",
+        "vandalism",
+        "other",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "IncidentInfo": {
+      "title": "IncidentInfo",
+      "description": "Information about the damage incident.",
+      "type": "object",
+      "properties": {
+        "incident_date": {
+          "title": "Incident Date",
+          "description": "When the damage occurred",
+          "type": "string",
+          "format": "date-time"
+        },
+        "incident_date_provenance": {
+          "$ref": "#/definitions/Provenance"
+        },
+        "incident_location": {
+          "title": "Incident Location",
+          "description": "Where the damage occurred (address/location)",
+          "type": "string"
+        },
+        "incident_location_provenance": {
+          "$ref": "#/definitions/Provenance"
+        },
+        "incident_description": {
+          "title": "Incident Description",
+          "description": "Narrative description of what happened",
+          "type": "string"
+        },
+        "incident_description_provenance": {
+          "$ref": "#/definitions/Provenance"
+        },
+        "damage_type": {
+          "description": "Category of damage",
+          "default": "unknown",
+          "allOf": [
+            {
+              "$ref": "#/definitions/DamageType"
+            }
+          ]
+        },
+        "damage_type_provenance": {
+          "$ref": "#/definitions/Provenance"
+        }
+      }
+    },
+    "PropertyType": {
+      "title": "PropertyType",
+      "description": "Type of property damaged.",
+      "enum": [
+        "window",
+        "roof",
+        "ceiling",
+        "wall",
+        "door",
+        "floor",
+        "appliance",
+        "furniture",
+        "other",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "DamageSeverity": {
+      "title": "DamageSeverity",
+      "description": "Severity assessment of damage.",
+      "enum": [
+        "minor",
+        "moderate",
+        "severe",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "PropertyDamageInfo": {
+      "title": "PropertyDamageInfo",
+      "description": "Details about the damaged property.",
+      "type": "object",
+      "properties": {
+        "property_type": {
+          "description": "Type of property damaged",
+          "default": "unknown",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PropertyType"
+            }
+          ]
+        },
+        "property_type_provenance": {
+          "$ref": "#/definitions/Provenance"
+        },
+        "room_location": {
+          "title": "Room Location",
+          "description": "Specific room or area within property",
+          "type": "string"
+        },
+        "room_location_provenance": {
+          "$ref": "#/definitions/Provenance"
+        },
+        "estimated_repair_cost": {
+          "title": "Estimated Repair Cost",
+          "description": "Estimated cost to repair (must be >= 0)",
+          "minimum": 0,
+          "type": "number"
+        },
+        "estimated_repair_cost_provenance": {
+          "$ref": "#/definitions/Provenance"
+        },
+        "damage_severity": {
+          "description": "Severity assessment",
+          "default": "unknown",
+          "allOf": [
+            {
+              "$ref": "#/definitions/DamageSeverity"
+            }
+          ]
+        },
+        "damage_severity_provenance": {
+          "$ref": "#/definitions/Provenance"
+        }
+      }
+    },
+    "EvidenceChecklist": {
+      "title": "EvidenceChecklist",
+      "description": "Tracks what evidence has been provided.",
+      "type": "object",
+      "properties": {
+        "has_damage_photos": {
+          "title": "Has Damage Photos",
+          "description": "Whether damage photos are provided",
+          "default": false,
+          "type": "boolean"
+        },
+        "damage_photo_count": {
+          "title": "Damage Photo Count",
+          "description": "Number of damage photos",
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "damage_photo_ids": {
+          "title": "Damage Photo Ids",
+          "description": "IDs/paths of damage photos",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "has_repair_estimate": {
+          "title": "Has Repair Estimate",
+          "description": "Whether repair estimate is provided",
+          "default": false,
+          "type": "boolean"
+        },
+        "has_incident_report": {
+          "title": "Has Incident Report",
+          "description": "Whether incident report is provided",
+          "default": false,
+          "type": "boolean"
+        },
+        "missing_evidence": {
+          "title": "Missing Evidence",
+          "description": "List of missing required evidence (e.g., 'repair_estimate', 'damage_photos')",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "ConsistencyFlags": {
+      "title": "ConsistencyFlags",
+      "description": "Flags for evidence consistency issues.",
+      "type": "object",
+      "properties": {
+        "has_conflicts": {
+          "title": "Has Conflicts",
+          "description": "Whether conflicts detected",
+          "default": false,
+          "type": "boolean"
+        },
+        "conflict_details": {
+          "title": "Conflict Details",
+          "description": "List of specific conflicts (e.g., 'date mismatch: text says Jan 1, image EXIF says Jan 5')",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
