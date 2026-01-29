@@ -25,7 +25,8 @@ logger = logging.getLogger(__name__)
 
 
 # Minimum completeness threshold to consider claim sufficient
-COMPLETENESS_THRESHOLD = 0.6
+# Higher threshold ensures more complete information before ending
+COMPLETENESS_THRESHOLD = 0.75
 
 
 class AudioBridge:
@@ -73,6 +74,12 @@ class AudioBridge:
         # Completeness tracking
         self._last_check_report: Optional[CheckReport] = None
         self._claim_complete_notified = False
+        
+        # Call ending - track goodbye from both parties
+        self._should_end_call = False
+        self._agent_said_goodbye = False
+        self._user_said_goodbye = False
+        self._goodbye_timeout_task: Optional[asyncio.Task] = None
         
         # Register OpenAI event handlers
         self._setup_event_handlers()
@@ -226,15 +233,58 @@ class AudioBridge:
                 # Handle response done
                 elif event.type == "response.done":
                     logger.debug("OpenAI response completed")
+                    # Check if both parties have said goodbye
+                    if self._should_end_call and self._agent_said_goodbye and self._user_said_goodbye:
+                        logger.info("Both parties said goodbye - ending call now")
+                        await asyncio.sleep(1.0)  # Brief pause after mutual goodbye
+                        await self._end_twilio_call()
+                        break
+                    elif self._should_end_call and self._agent_said_goodbye:
+                        # Agent said goodbye, wait a bit for user's response
+                        logger.info("Agent said goodbye, waiting for user response...")
+                        # Don't break - wait for user's goodbye
+                
+                # Handle AI's response transcript (to detect goodbye and END_CALL)
+                elif event.type == "response.audio_transcript.done":
+                    transcript = event.data.get("transcript", "")
+                    if transcript:
+                        # Add to conversation record
+                        self.fnol_state.add_transcript_entry("assistant", transcript)
+                        logger.debug(f"Agent said: {transcript[:100]}...")
+                        
+                        transcript_lower = transcript.lower()
+                        
+                        # Check for END_CALL signal (case insensitive, anywhere in text)
+                        if "END_CALL" in transcript.upper() or "END CALL" in transcript.upper():
+                            logger.info("Agent sent END_CALL signal")
+                            self._should_end_call = True
+                        
+                        # Check if agent said goodbye
+                        goodbye_phrases = ["bye", "goodbye", "take care", "have a good", "talk soon"]
+                        if any(phrase in transcript_lower for phrase in goodbye_phrases):
+                            logger.info("Agent said goodbye")
+                            self._agent_said_goodbye = True
+                            # If user already said goodbye, we can end
+                            if self._user_said_goodbye:
+                                self._should_end_call = True
+                            else:
+                                # Start a timeout - if user doesn't respond in 5 seconds, end anyway
+                                if self._goodbye_timeout_task is None:
+                                    self._goodbye_timeout_task = asyncio.create_task(
+                                        self._goodbye_timeout()
+                                    )
                 
                 # Handle speech started (barge-in)
                 elif event.is_speech_started:
                     if self._is_agent_speaking:
-                        # User interrupted - clear Twilio playback
+                        logger.info("🛑 User interrupted - stopping agent speech")
+                        # User interrupted - clear Twilio playback immediately
                         await self._clear_twilio_playback()
                         # Cancel OpenAI response
                         await self.openai_client.cancel_response()
                         self._is_agent_speaking = False
+                        # Note: The AI will naturally respond to the interruption
+                        # because the prompt instructs it to say "Oh, go ahead" etc.
                 
                 # Handle transcript completion
                 elif event.is_transcript_complete and event.transcript:
@@ -242,6 +292,17 @@ class AudioBridge:
                     self._pending_transcripts.append(event.transcript)
                     # Add to conversation record
                     self.fnol_state.add_transcript_entry("user", event.transcript)
+                    
+                    # Check if user said goodbye
+                    user_text_lower = event.transcript.lower()
+                    goodbye_phrases = ["bye", "goodbye", "take care", "thank you", "thanks"]
+                    if any(phrase in user_text_lower for phrase in goodbye_phrases):
+                        logger.info(f"User said goodbye: '{event.transcript}'")
+                        self._user_said_goodbye = True
+                        # If agent already said goodbye, we can end
+                        if self._agent_said_goodbye:
+                            self._should_end_call = True
+                            logger.info("Both parties have said goodbye - will end call after next response")
                     
                     # If agent isn't speaking, process immediately
                     if not self._is_agent_speaking:
@@ -291,6 +352,34 @@ class AudioBridge:
         except Exception as e:
             logger.error(f"Failed to clear Twilio playback: {e}")
     
+    async def _end_twilio_call(self) -> None:
+        """End the Twilio call gracefully."""
+        # Cancel any pending goodbye timeout
+        if self._goodbye_timeout_task and not self._goodbye_timeout_task.done():
+            self._goodbye_timeout_task.cancel()
+        
+        if not self._twilio_ws:
+            return
+        
+        try:
+            # Close the WebSocket which will end the Media Stream
+            await self._twilio_ws.close()
+            logger.info("Twilio call ended gracefully")
+        except Exception as e:
+            logger.warning(f"Error closing Twilio WebSocket: {e}")
+    
+    async def _goodbye_timeout(self) -> None:
+        """Timeout handler - end call if user doesn't respond after agent says goodbye."""
+        try:
+            await asyncio.sleep(5.0)  # Wait 5 seconds for user to respond
+            if self._agent_said_goodbye and not self._user_said_goodbye:
+                logger.info("Goodbye timeout - user didn't respond, ending call")
+                self._should_end_call = True
+                self._user_said_goodbye = True  # Force the condition to end
+                await self._end_twilio_call()
+        except asyncio.CancelledError:
+            pass  # Timeout was cancelled (user responded)
+    
     async def _process_pending_transcripts(self) -> None:
         """Process pending transcripts for claim field extraction."""
         if not self._pending_transcripts:
@@ -299,6 +388,8 @@ class AudioBridge:
         # Combine pending transcripts
         combined = " ".join(self._pending_transcripts)
         self._pending_transcripts.clear()
+        
+        logger.info(f"📝 Processing user transcript: {combined[:100]}...")
         
         # Extract fields from transcript
         try:
@@ -312,14 +403,23 @@ class AudioBridge:
             )
             
             if extracted:
+                logger.info(f"🔍 Extracted fields: {extracted}")
                 updated_fields = self.claim_state.apply_patch(extracted)
-                logger.info(f"Updated claim fields: {updated_fields}")
+                logger.info(f"✅ Updated claim fields: {updated_fields}")
+                
+                # Log current state for debugging
+                claim = self.claim_state.claim
+                logger.debug(f"Current claim state - Name: {claim.claimant.name}, Policy: {claim.claimant.policy_number}")
                 
                 # Update the agent's instructions with new context
                 await self._update_agent_context()
+            else:
+                logger.debug("No fields extracted from this transcript")
                 
         except Exception as e:
-            logger.error(f"Failed to extract claim fields: {e}")
+            logger.error(f"❌ Failed to extract claim fields: {e}")
+            import traceback
+            traceback.print_exc()
     
     def _check_claim_completeness(self) -> CheckReport:
         """

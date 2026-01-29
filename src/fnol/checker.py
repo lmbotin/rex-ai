@@ -204,11 +204,20 @@ def check_claim(claim: PropertyDamageClaim) -> CheckReport:
     if claim.incident.incident_date:
         now = datetime.utcnow()
         incident_date = claim.incident.incident_date
+        
+        # Handle string dates (convert to datetime if needed)
+        if isinstance(incident_date, str):
+            try:
+                incident_date = datetime.fromisoformat(incident_date.replace('Z', '+00:00').replace('+00:00', ''))
+            except ValueError:
+                # Can't parse date string, skip this check
+                incident_date = None
 
-        if incident_date > now:
-            contradictions.append(f"Incident date is in the future: {incident_date.isoformat()}")
-        elif incident_date < now - timedelta(days=730):  # 2 years
-            contradictions.append(f"Incident date is more than 2 years old: {incident_date.isoformat()}")
+        if incident_date is not None:
+            if incident_date > now:
+                contradictions.append(f"Incident date is in the future: {incident_date.isoformat()}")
+            elif incident_date < now - timedelta(days=730):  # 2 years
+                contradictions.append(f"Incident date is more than 2 years old: {incident_date.isoformat()}")
 
     # 6. Location provided but confidence <0.3
     if claim.incident.incident_location and claim.incident.incident_location_provenance:
