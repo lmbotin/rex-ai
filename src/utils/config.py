@@ -35,8 +35,8 @@ class Settings(BaseSettings):
         description="Model to use for FNOL extraction",
     )
     openai_realtime_voice: str = Field(
-        default="alloy",
-        description="Voice to use for OpenAI Realtime (alloy, echo, fable, onyx, nova, shimmer)",
+        default="shimmer",
+        description="Voice to use for OpenAI Realtime (alloy, echo, fable, onyx, nova, shimmer). Shimmer is warm and friendly.",
     )
     
     # Twilio Configuration
@@ -67,11 +67,12 @@ class Settings(BaseSettings):
     # Voice Agent Configuration
     silence_duration_ms: int = Field(
         default=600,
-        description="Silence duration before VAD triggers end of speech (ms)",
+        description="Silence duration before VAD triggers end of speech (ms). 600ms is balanced.",
     )
+    # Note: welcome_message is no longer used - the AI agent handles the greeting naturally
     welcome_message: str = Field(
-        default="Welcome to Gana Insurance. I'll help you file your claim. May I have your name please?",
-        description="Initial greeting message",
+        default="",
+        description="Deprecated - AI agent now handles greeting directly",
     )
     
     @property

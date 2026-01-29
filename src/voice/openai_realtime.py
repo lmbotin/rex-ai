@@ -244,10 +244,21 @@ class OpenAIRealtimeClient:
                 },
                 "turn_detection": {
                     "type": "server_vad",
-                    "threshold": 0.5,
-                    "prefix_padding_ms": 300,
+                    # Higher threshold = less sensitive to background noise (0.7 is conservative)
+                    "threshold": 0.7,
+                    # Require 1.5+ seconds of sustained speech before triggering interruption
+                    # This prevents the AI from stopping mid-sentence on brief sounds or "uh-huh"
+                    "prefix_padding_ms": 1500,
+                    # How long to wait for silence before considering speech done
                     "silence_duration_ms": settings.silence_duration_ms,
+                    # Automatically create response when user finishes speaking
+                    "create_response": True,
                 },
+                # Temperature for more natural, varied responses
+                "temperature": 0.8,
+                # No token limit - let her speak as long as needed
+                # (Previously 300 was causing mid-sentence cutoffs)
+                "max_response_output_tokens": "inf",
             },
         }
         

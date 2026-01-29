@@ -30,6 +30,7 @@ from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import Response, JSONResponse
 
 from ..utils.config import settings
+from ..storage import save_claim, get_claim_store
 from .bridge import AudioBridge
 
 # Claim processing (imported lazily to avoid startup delay)
@@ -134,9 +135,9 @@ async def twilio_voice(request: Request):
     
     # Generate TwiML response
     # Note: We use <Connect><Stream> for bidirectional streaming
+    # No <Say> element - the AI agent will greet naturally via the realtime API
     twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Say voice="Polly.Joanna">{settings.welcome_message}</Say>
     <Connect>
         <Stream url="{stream_url}">
             <Parameter name="callSid" value="{call_sid}" />
@@ -215,27 +216,78 @@ async def twilio_stream(websocket: WebSocket):
             logger.info(f"Call {call_sid} removed from active_calls")
         
         # Log final FNOL state and process through LangGraph workflow
-        if bridge and bridge.call_sid:
-            logger.info(f"Call {bridge.call_sid} completed")
+        if bridge:
+            call_id = bridge.call_sid or "unknown"
+            logger.info(f"Call {call_id} completed")
             logger.info(f"FNOL Summary:\n{bridge.get_fnol_summary()}")
             
-            # Process the claim through LangGraph (async background task)
+            # Get the claim data first
+            fnol_data = bridge.get_fnol_data()
+            logger.info(f"FNOL Data extracted: {list(fnol_data.keys())}")
+            logger.info(f"Claimant: {fnol_data.get('claimant', {})}")
+            logger.info(f"Incident: {fnol_data.get('incident', {})}")
+            logger.info(f"Property Damage: {fnol_data.get('property_damage', {})}")
+            
+            # Always try to save the claim data, even if processing fails
+            claim_id = None
             try:
-                fnol_data = bridge.get_fnol_data()
+                claim_id = save_claim(
+                    claim_data=fnol_data,
+                    source="voice",
+                    call_sid=call_id,
+                )
+                logger.info(f"✅ Claim saved to database with ID: {claim_id}")
+            except Exception as db_error:
+                logger.error(f"❌ Failed to save claim to database: {db_error}")
+                import traceback
+                traceback.print_exc()
+            
+            # Now try to process the claim
+            try:
                 processor = get_claim_processor()
-                result = await processor.process_claim(fnol_data, bridge.call_sid)
+                result = await processor.process_claim(fnol_data, call_id)
                 
-                # Store the result
-                processed_claims[bridge.call_sid] = {
+                # Store in memory for API access
+                processed_claims[call_id] = {
                     "fnol_data": fnol_data,
-                    "processing_result": result,
+                    "processing_result": result.to_dict(),
                 }
                 
-                logger.info(f"Claim processed: {result['routing_decision']} - {result['routing_reason']}")
-                logger.info(f"Fraud score: {result['fraud_score']:.2f}, Priority: {result['priority']}")
-                logger.info(f"Next actions: {result['next_actions']}")
+                # Update the database with processing results
+                if claim_id:
+                    try:
+                        store = get_claim_store()
+                        store.save_processing_result(
+                            claim_id=claim_id,
+                            validation_result={
+                                "is_complete": result.is_complete,
+                                "missing_fields": result.missing_fields,
+                                "validation_errors": result.validation_errors,
+                            },
+                            fraud_result={
+                                "fraud_score": result.fraud_score,
+                                "fraud_indicators": result.fraud_indicators,
+                            },
+                            routing_result={
+                                "priority": result.priority.value if hasattr(result.priority, 'value') else str(result.priority),
+                                "routing_decision": result.routing_decision.value if hasattr(result.routing_decision, 'value') else str(result.routing_decision),
+                                "routing_reason": result.routing_reason,
+                                "final_status": result.final_status,
+                                "next_actions": result.next_actions,
+                            },
+                        )
+                        store.update_status(claim_id, result.final_status)
+                        logger.info(f"✅ Processing results saved for claim {claim_id}")
+                    except Exception as db_error:
+                        logger.error(f"❌ Failed to save processing results: {db_error}")
+                
+                logger.info(f"Claim processed: {result.routing_decision} - {result.routing_reason}")
+                logger.info(f"Fraud score: {result.fraud_score:.2f}, Priority: {result.priority}")
+                logger.info(f"Next actions: {result.next_actions}")
             except Exception as e:
-                logger.error(f"Failed to process claim through workflow: {e}")
+                logger.error(f"❌ Failed to process claim through workflow: {e}")
+                import traceback
+                traceback.print_exc()
 
 
 # =============================================================================
