@@ -6,7 +6,7 @@ AI-native insurance platform for operational/ AI liability claims.
 
 ---
 
-**<u>Current demo status<u>**
+**<u>Current demo status (sprint 2)<u>**
 
 Easiest way to see the demo today is
 
@@ -39,7 +39,7 @@ Everything else (Overview, Policies, Rex AI copilot) is placeholder UI to show t
 
 ---
 
-**<u>Running locally<u>** (same as above, just locally, without render/vercel)
+**<ins>Running locally<u>** (same as above, just locally, without render/vercel)
 
 Prerequisites:
 - Node.js >= 18 (tested with v20+)
