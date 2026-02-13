@@ -31,9 +31,7 @@ Sarah:  Got it, thanks. I've verified Beta Freight Co. under policy 555123 — e
 
 You: It was a pricing error. Our system quoted a customer $3,000 but the actual cost of the load was $10,000
 
-... 
-
-[continue until all relevant info has been extracted]
+[...]
 
 Everything else (Overview, Policies, Rex AI copilot) is placeholder UI to show the intended product direction
 
